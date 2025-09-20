@@ -1,530 +1,777 @@
-// NEXUS AXION - 100% PURE JAVASCRIPT
-// Frontend Essence → Backend Environment
-// Zero External Dependencies - Pure Node.js
+// NEXUS AXION - API AS COMPONENTS ARCHITECTURE
+// Auto-generation of UI components from API endpoints
+// Pure JavaScript - Zero external dependencies
 
 const http = require('http');
 
-// ===== NEXUS AXION CORE - PURE IMPLEMENTATION =====
+// ===== CORE NEXUS SYSTEM - API ESSENCE ABSORBED =====
 
-// Global Application State (React-like but server-native)
-const appState = {
-  data: {
-    users: [
-      { id: '1', name: 'Alice', email: 'alice@example.com', created: Date.now() },
-      { id: '2', name: 'Bob', email: 'bob@example.com', created: Date.now() }
-    ],
-    posts: [],
-    stats: { visits: 0, lastAccess: null }
-  },
-  
-  // React-like setState
-  setState(updater) {
-    if (typeof updater === 'function') {
-      this.data = { ...this.data, ...updater(this.data) };
-    } else {
-      this.data = { ...this.data, ...updater };
+// API Schema Definition System
+class APISchema {
+    constructor(method, path, config = {}) {
+        this.method = method.toUpperCase();
+        this.path = path;
+        this.params = this.extractParams(path);
+        this.body = config.body || null;
+        this.response = config.response || null;
+        this.validation = config.validation || {};
+        this.meta = config.meta || {};
     }
-    this.notify();
-  },
-  
-  // React-like state subscription
-  subscribers: [],
-  subscribe(callback) {
-    this.subscribers.push(callback);
-    return () => {
-      const index = this.subscribers.indexOf(callback);
-      if (index > -1) this.subscribers.splice(index, 1);
-    };
-  },
-  
-  notify() {
-    this.subscribers.forEach(callback => callback(this.data));
-  }
-};
-
-// Event System (DOM-like but server-native)
-const events = {
-  listeners: {},
-  
-  on(event, callback) {
-    if (!this.listeners[event]) this.listeners[event] = [];
-    this.listeners[event].push(callback);
-  },
-  
-  emit(event, data) {
-    if (this.listeners[event]) {
-      this.listeners[event].forEach(callback => callback(data));
-    }
-  }
-};
-
-// Component System (React-like but server-native)
-function createComponent(name, props = {}) {
-  return {
-    name,
-    props,
-    state: { ...appState.data },
     
-    render() {
-      return {
-        component: this.name,
-        props: this.props,
-        state: this.state,
-        timestamp: Date.now()
-      };
+    extractParams(path) {
+        const params = [];
+        const matches = path.match(/:(\w+)/g);
+        if (matches) {
+            matches.forEach(match => {
+                params.push(match.slice(1));
+            });
+        }
+        return params;
     }
-  };
+    
+    generateId() {
+        return `${this.method}_${this.path.replace(/[/:]/g, '_')}`;
+    }
 }
 
-// Simple Router (React Router-like but server-native)
-const router = {
-  routes: {},
-  
-  get(path, handler) {
-    this.routes[`GET:${path}`] = handler;
-  },
-  
-  post(path, handler) {
-    this.routes[`POST:${path}`] = handler;
-  },
-  
-  match(method, url) {
-    // Simple exact match
-    const key = `${method}:${url}`;
-    if (this.routes[key]) return this.routes[key];
-    
-    // Dynamic routes (/api/users/:id)
-    for (const route in this.routes) {
-      const [routeMethod, routePath] = route.split(':');
-      if (routeMethod !== method) continue;
-      
-      const routeParts = routePath.split('/');
-      const urlParts = url.split('/');
-      
-      if (routeParts.length !== urlParts.length) continue;
-      
-      const params = {};
-      let match = true;
-      
-      for (let i = 0; i < routeParts.length; i++) {
-        if (routeParts[i].startsWith(':')) {
-          params[routeParts[i].slice(1)] = urlParts[i];
-        } else if (routeParts[i] !== urlParts[i]) {
-          match = false;
-          break;
-        }
-      }
-      
-      if (match) return (req, res) => this.routes[route](req, res, params);
+// Component Auto-Generator from API
+class APIComponentGenerator {
+    constructor() {
+        this.components = new Map();
+        this.schemas = new Map();
     }
     
-    return null;
-  }
+    // Define API endpoint and auto-generate component
+    defineAPI(method, path, config = {}) {
+        const schema = new APISchema(method, path, config);
+        const componentId = schema.generateId();
+        
+        this.schemas.set(componentId, schema);
+        
+        // Auto-generate component based on HTTP method
+        let component;
+        switch (method.toUpperCase()) {
+            case 'GET':
+                component = this.generateDisplayComponent(schema);
+                break;
+            case 'POST':
+                component = this.generateFormComponent(schema);
+                break;
+            case 'PUT':
+                component = this.generateEditComponent(schema);
+                break;
+            case 'DELETE':
+                component = this.generateDeleteComponent(schema);
+                break;
+            default:
+                component = this.generateGenericComponent(schema);
+        }
+        
+        this.components.set(componentId, component);
+        return component;
+    }
+    
+    // GET endpoint → Display component with loading/error states
+    generateDisplayComponent(schema) {
+        return {
+            type: 'display',
+            schema: schema,
+            state: {
+                data: null,
+                loading: false,
+                error: null
+            },
+            
+            async fetch(params = {}) {
+                this.state.loading = true;
+                this.state.error = null;
+                
+                try {
+                    let url = schema.path;
+                    // Replace path parameters
+                    schema.params.forEach(param => {
+                        if (params[param]) {
+                            url = url.replace(`:${param}`, params[param]);
+                        }
+                    });
+                    
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    this.state.data = await response.json();
+                    this.state.loading = false;
+                    
+                    return this.render();
+                } catch (error) {
+                    this.state.error = error.message;
+                    this.state.loading = false;
+                    return this.render();
+                }
+            },
+            
+            render() {
+                if (this.state.loading) {
+                    return this.renderLoading();
+                }
+                if (this.state.error) {
+                    return this.renderError();
+                }
+                if (this.state.data) {
+                    return this.renderData();
+                }
+                return this.renderEmpty();
+            },
+            
+            renderLoading() {
+                return `
+                    <div class="api-component loading" data-endpoint="${schema.method} ${schema.path}">
+                        <div class="spinner"></div>
+                        <p>Loading ${schema.path}...</p>
+                    </div>
+                `;
+            },
+            
+            renderError() {
+                return `
+                    <div class="api-component error" data-endpoint="${schema.method} ${schema.path}">
+                        <div class="error-icon">⚠️</div>
+                        <p>Error: ${this.state.error}</p>
+                        <button onclick="this.parentElement.component.fetch()">Retry</button>
+                    </div>
+                `;
+            },
+            
+            renderData() {
+                const data = this.state.data;
+                let content = '';
+                
+                if (Array.isArray(data)) {
+                    content = `
+                        <div class="data-list">
+                            ${data.map(item => `
+                                <div class="data-item">
+                                    ${this.renderObject(item)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    content = this.renderObject(data);
+                }
+                
+                return `
+                    <div class="api-component success" data-endpoint="${schema.method} ${schema.path}">
+                        <div class="component-header">
+                            <h3>${schema.method} ${schema.path}</h3>
+                            <button onclick="this.closest('.api-component').component.fetch()">🔄</button>
+                        </div>
+                        ${content}
+                    </div>
+                `;
+            },
+            
+            renderObject(obj) {
+                return `
+                    <div class="object-display">
+                        ${Object.entries(obj).map(([key, value]) => `
+                            <div class="field">
+                                <span class="key">${key}:</span>
+                                <span class="value">${typeof value === 'object' ? JSON.stringify(value) : value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            },
+            
+            renderEmpty() {
+                return `
+                    <div class="api-component empty" data-endpoint="${schema.method} ${schema.path}">
+                        <p>No data available</p>
+                        <button onclick="this.parentElement.component.fetch()">Load Data</button>
+                    </div>
+                `;
+            }
+        };
+    }
+    
+    // POST endpoint → Form component with validation
+    generateFormComponent(schema) {
+        return {
+            type: 'form',
+            schema: schema,
+            state: {
+                formData: {},
+                submitting: false,
+                success: false,
+                error: null
+            },
+            
+            async submit(formData) {
+                this.state.submitting = true;
+                this.state.error = null;
+                this.state.success = false;
+                
+                try {
+                    const response = await fetch(schema.path, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    this.state.success = true;
+                    this.state.submitting = false;
+                    this.state.formData = {};
+                    
+                    return this.render();
+                } catch (error) {
+                    this.state.error = error.message;
+                    this.state.submitting = false;
+                    return this.render();
+                }
+            },
+            
+            render() {
+                const fields = this.generateFields();
+                
+                return `
+                    <div class="api-component form" data-endpoint="${schema.method} ${schema.path}">
+                        <div class="component-header">
+                            <h3>Create ${schema.path.split('/').pop()}</h3>
+                        </div>
+                        
+                        ${this.state.success ? `
+                            <div class="success-message">
+                                ✅ Successfully created!
+                            </div>
+                        ` : ''}
+                        
+                        ${this.state.error ? `
+                            <div class="error-message">
+                                ⚠️ ${this.state.error}
+                            </div>
+                        ` : ''}
+                        
+                        <form class="api-form" onsubmit="return this.closest('.api-component').component.handleSubmit(event)">
+                            ${fields}
+                            <div class="form-actions">
+                                <button type="submit" ${this.state.submitting ? 'disabled' : ''}>
+                                    ${this.state.submitting ? 'Creating...' : 'Create'}
+                                </button>
+                                <button type="reset">Clear</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+            },
+            
+            generateFields() {
+                // Auto-generate form fields based on schema or common patterns
+                const resource = schema.path.split('/').pop();
+                
+                // Common fields for different resources
+                const fieldTemplates = {
+                    users: ['name', 'email', 'role'],
+                    posts: ['title', 'content', 'tags'],
+                    products: ['name', 'price', 'description'],
+                    default: ['name', 'description']
+                };
+                
+                const fields = fieldTemplates[resource] || fieldTemplates.default;
+                
+                return fields.map(field => `
+                    <div class="form-field">
+                        <label for="${field}">${field.charAt(0).toUpperCase() + field.slice(1)}</label>
+                        <input 
+                            type="${field === 'email' ? 'email' : field === 'price' ? 'number' : 'text'}"
+                            id="${field}"
+                            name="${field}"
+                            required
+                            ${field === 'content' || field === 'description' ? 'placeholder="Enter detailed information..."' : ''}
+                        />
+                    </div>
+                `).join('');
+            },
+            
+            handleSubmit(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const data = Object.fromEntries(formData);
+                this.submit(data);
+                return false;
+            }
+        };
+    }
+    
+    // DELETE endpoint → Confirmation component
+    generateDeleteComponent(schema) {
+        return {
+            type: 'delete',
+            schema: schema,
+            state: {
+                confirming: false,
+                deleting: false,
+                success: false,
+                error: null
+            },
+            
+            async delete(params = {}) {
+                this.state.deleting = true;
+                this.state.error = null;
+                
+                try {
+                    let url = schema.path;
+                    schema.params.forEach(param => {
+                        if (params[param]) {
+                            url = url.replace(`:${param}`, params[param]);
+                        }
+                    });
+                    
+                    const response = await fetch(url, { method: 'DELETE' });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    this.state.success = true;
+                    this.state.deleting = false;
+                    this.state.confirming = false;
+                    
+                    return this.render();
+                } catch (error) {
+                    this.state.error = error.message;
+                    this.state.deleting = false;
+                    return this.render();
+                }
+            },
+            
+            render() {
+                if (this.state.success) {
+                    return `
+                        <div class="api-component delete success" data-endpoint="${schema.method} ${schema.path}">
+                            <div class="success-message">
+                                ✅ Successfully deleted!
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="api-component delete" data-endpoint="${schema.method} ${schema.path}">
+                        ${this.state.error ? `
+                            <div class="error-message">⚠️ ${this.state.error}</div>
+                        ` : ''}
+                        
+                        ${this.state.confirming ? `
+                            <div class="confirmation-dialog">
+                                <p>Are you sure you want to delete this item?</p>
+                                <div class="confirmation-actions">
+                                    <button 
+                                        class="danger" 
+                                        onclick="this.closest('.api-component').component.confirmDelete()"
+                                        ${this.state.deleting ? 'disabled' : ''}
+                                    >
+                                        ${this.state.deleting ? 'Deleting...' : 'Yes, Delete'}
+                                    </button>
+                                    <button onclick="this.closest('.api-component').component.cancelDelete()">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        ` : `
+                            <button 
+                                class="danger" 
+                                onclick="this.closest('.api-component').component.startDelete()"
+                            >
+                                🗑️ Delete
+                            </button>
+                        `}
+                    </div>
+                `;
+            },
+            
+            startDelete() {
+                this.state.confirming = true;
+                this.updateDOM();
+            },
+            
+            cancelDelete() {
+                this.state.confirming = false;
+                this.updateDOM();
+            },
+            
+            confirmDelete(params) {
+                this.delete(params);
+            },
+            
+            updateDOM() {
+                // Re-render component in place
+                const element = document.querySelector(`[data-endpoint="${schema.method} ${schema.path}"]`);
+                if (element) {
+                    element.outerHTML = this.render();
+                    this.attachToDOM();
+                }
+            }
+        };
+    }
+    
+    generateGenericComponent(schema) {
+        return {
+            type: 'generic',
+            schema: schema,
+            render() {
+                return `
+                    <div class="api-component generic" data-endpoint="${schema.method} ${schema.path}">
+                        <h3>${schema.method} ${schema.path}</h3>
+                        <p>Generic API component</p>
+                        <pre>${JSON.stringify(schema, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        };
+    }
+    
+    // Get component by endpoint
+    getComponent(method, path) {
+        const id = `${method.toUpperCase()}_${path.replace(/[/:]/g, '_')}`;
+        return this.components.get(id);
+    }
+    
+    // Render all components as HTML page
+    renderAllComponents() {
+        const componentsHTML = Array.from(this.components.values())
+            .map(component => component.render())
+            .join('\n');
+            
+        return componentsHTML;
+    }
+}
+
+// ===== APPLICATION SETUP =====
+
+// Initialize the API-to-Components system
+const apiSystem = new APIComponentGenerator();
+
+// Define your APIs - components auto-generate
+const userListComponent = apiSystem.defineAPI('GET', '/api/users', {
+    response: { type: 'array', items: { id: 'number', name: 'string', email: 'string' } }
+});
+
+const userDetailComponent = apiSystem.defineAPI('GET', '/api/users/:id', {
+    response: { id: 'number', name: 'string', email: 'string', created: 'date' }
+});
+
+const createUserComponent = apiSystem.defineAPI('POST', '/api/users', {
+    body: { name: 'string', email: 'string' },
+    response: { id: 'number', name: 'string', email: 'string', created: 'date' }
+});
+
+const deleteUserComponent = apiSystem.defineAPI('DELETE', '/api/users/:id');
+
+// Mock data store
+const dataStore = {
+    users: [
+        { id: 1, name: 'Alice', email: 'alice@example.com', created: Date.now() },
+        { id: 2, name: 'Bob', email: 'bob@example.com', created: Date.now() }
+    ],
+    nextId: 3
 };
 
-// ===== EVENT HANDLERS (React-like event handling) =====
+// ===== HTTP SERVER =====
 
-events.on('user:created', (userData) => {
-  console.log('Event: New user created', userData.name);
-  appState.setState(state => ({
-    users: [...state.users, userData],
-    stats: { ...state.stats, lastAccess: Date.now() }
-  }));
-});
-
-events.on('page:visit', (data) => {
-  appState.setState(state => ({
-    stats: { 
-      visits: state.stats.visits + 1, 
-      lastAccess: Date.now() 
+const server = http.createServer((req, res) => {
+    const url = req.url;
+    const method = req.method;
+    
+    console.log(`${method} ${url}`);
+    
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    if (method === 'OPTIONS') {
+        res.writeHead(200);
+        res.end();
+        return;
     }
-  }));
-});
-
-// ===== ROUTES (Frontend-like component rendering) =====
-
-// Home route - renders HTML interface server-side
-router.get('/', (req, res) => {
-  events.emit('page:visit', { path: '/', timestamp: Date.now() });
-  
-  const state = appState.data;
-  
-  const html = `
+    
+    // Main page - render all auto-generated components
+    if (url === '/') {
+        const html = `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS AXION - Frontend Essence in Backend</title>
+    <title>NEXUS AXION - API as Components</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: system-ui, -apple-system, sans-serif;
             margin: 0;
-            padding: 20px;
-            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
+            min-height: 100vh;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            padding: 20px;
         }
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
         h1 {
-            font-size: 2.5em;
+            font-size: 3em;
             margin: 0;
             background: linear-gradient(45deg, #fff, #ffd700);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
         .subtitle {
             font-size: 1.2em;
             opacity: 0.9;
             margin-top: 10px;
         }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        .stat-card {
-            background: rgba(255,255,255,0.2);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #ffd700;
-        }
-        .users-list {
-            background: rgba(255,255,255,0.2);
+        .api-component {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
             border-radius: 15px;
             padding: 20px;
-            margin-top: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        .user {
+        .component-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border-left: 4px solid #ffd700;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
-        .user:last-child {
-            margin-bottom: 0;
-        }
-        .architecture-info {
-            background: rgba(255,255,255,0.2);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        .feature {
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }
-        .feature::before {
-            content: "✨";
-            margin-right: 10px;
-        }
-        .api-links {
+        .api-form {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 15px;
-            margin-top: 20px;
         }
-        .api-link {
-            background: rgba(255,255,255,0.2);
-            padding: 15px;
-            border-radius: 10px;
-            text-decoration: none;
-            color: white;
-            border: 1px solid rgba(255,255,255,0.3);
-            transition: all 0.3s ease;
+        .form-field {
+            display: flex;
+            flex-direction: column;
         }
-        .api-link:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
+        .form-field label {
+            margin-bottom: 5px;
+            font-weight: bold;
         }
-        .btn {
-            background: linear-gradient(45deg, #ffd700, #ffed4a);
-            color: #333;
+        .form-field input {
+            padding: 10px;
             border: none;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .form-field input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        button {
             padding: 10px 20px;
-            border-radius: 25px;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
-            margin: 5px;
             transition: transform 0.2s;
         }
-        .btn:hover {
+        button:hover {
             transform: scale(1.05);
         }
-        @media (max-width: 768px) {
-            .container { padding: 20px; }
-            h1 { font-size: 2em; }
-            .stats { grid-template-columns: 1fr; }
+        button[type="submit"] {
+            background: #4CAF50;
+            color: white;
+        }
+        button.danger {
+            background: #f44336;
+            color: white;
+        }
+        .success-message {
+            background: #4CAF50;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .error-message {
+            background: #f44336;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .data-list {
+            display: grid;
+            gap: 10px;
+        }
+        .data-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .object-display {
+            display: grid;
+            gap: 8px;
+        }
+        .field {
+            display: flex;
+            justify-content: space-between;
+        }
+        .key {
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌌 NEXUS AXION</h1>
-            <p class="subtitle">Frontend Essence Absorbed in Backend Environment</p>
+            <h1>🔮 NEXUS AXION</h1>
+            <p class="subtitle">API as Components - Auto-Generated UI</p>
         </div>
         
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value">${state.users.length}</div>
-                <div>Total Users</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${state.stats.visits}</div>
-                <div>Page Visits</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB</div>
-                <div>Memory Usage</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${Math.round(process.uptime())}s</div>
-                <div>Uptime</div>
-            </div>
-        </div>
-
-        <div class="users-list">
-            <h3>👥 Current Users</h3>
-            ${state.users.map(user => `
-                <div class="user">
-                    <div>
-                        <strong>${user.name}</strong><br>
-                        <small>${user.email}</small>
-                    </div>
-                    <div>
-                        <small>ID: ${user.id}</small>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-
-        <div class="architecture-info">
-            <h3>🏗️ Architecture NEXUS AXION</h3>
-            <div class="feature">Pure JavaScript - Zero Dependencies</div>
-            <div class="feature">Frontend State Management Server-Side</div>
-            <div class="feature">React-like Components in Backend</div>
-            <div class="feature">Event-Driven Architecture</div>
-            <div class="feature">Universal Deployment Compatibility</div>
-        </div>
-
-        <div class="api-links">
-            <a href="/api/state" class="api-link">
-                <strong>📊 API State</strong><br>
-                <small>View current application state</small>
-            </a>
-            <a href="/health" class="api-link">
-                <strong>❤️ Health Check</strong><br>
-                <small>System health and metrics</small>
-            </a>
-            <a href="/api/users/1" class="api-link">
-                <strong>👤 User API</strong><br>
-                <small>Get specific user data</small>
-            </a>
-        </div>
-
-        <div style="text-align: center; margin-top: 30px; opacity: 0.8;">
-            <p>Concept: Single codebase thinking with frontend patterns, deployed on backend infrastructure</p>
-            <p>Last Update: ${new Date(state.stats.lastAccess || Date.now()).toLocaleString()}</p>
+        <div id="components-container">
+            ${apiSystem.renderAllComponents()}
         </div>
     </div>
-
+    
     <script>
-        // Pure JavaScript frontend functionality (no external deps)
-        console.log('NEXUS AXION: Frontend essence running in browser');
-        console.log('Backend-generated page with frontend interactivity');
+        // Attach component instances to DOM elements
+        document.addEventListener('DOMContentLoaded', function() {
+            const components = document.querySelectorAll('.api-component');
+            components.forEach(element => {
+                const endpoint = element.getAttribute('data-endpoint');
+                if (endpoint) {
+                    const [method, path] = endpoint.split(' ');
+                    // This would attach the actual component instance
+                    console.log('Component for:', method, path);
+                }
+            });
+        });
         
-        // Auto-refresh stats every 10 seconds
-        setInterval(() => {
-            fetch('/api/state')
-                .then(r => r.json())
-                .then(data => {
-                    console.log('State updated:', data);
-                    // Could update DOM here for real-time updates
-                });
-        }, 10000);
+        // Global helper functions for component interactions
+        window.apiSystem = {
+            async fetchComponent(method, path, params) {
+                // Implementation for fetching data
+                console.log('Fetching:', method, path, params);
+            },
+            
+            async submitForm(method, path, formData) {
+                // Implementation for form submission
+                console.log('Submitting:', method, path, formData);
+            }
+        };
     </script>
 </body>
 </html>`;
-  
-  res.writeHead(200, { 
-    'Content-Type': 'text/html',
-    'Access-Control-Allow-Origin': '*'
-  });
-  
-  res.end(html);
-});
-
-// API - Get current state
-router.get('/api/state', (req, res) => {
-  res.writeHead(200, { 
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
-  });
-  
-  res.end(JSON.stringify({
-    currentState: appState.data,
-    timestamp: Date.now(),
-    architecture: 'Reactive state management server-side'
-  }));
-});
-
-// API - Create user
-router.post('/api/users', (req, res) => {
-  let body = '';
-  
-  req.on('data', chunk => {
-    body += chunk.toString();
-  });
-  
-  req.on('end', () => {
-    try {
-      const userData = JSON.parse(body || '{}');
-      const newUser = {
-        id: Date.now().toString(),
-        name: userData.name || 'Anonymous',
-        email: userData.email || `user${Date.now()}@example.com`,
-        created: Date.now()
-      };
-      
-      // Emit event (like React synthetic events)
-      events.emit('user:created', newUser);
-      
-      res.writeHead(201, { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      });
-      
-      res.end(JSON.stringify({
-        success: true,
-        user: newUser,
-        totalUsers: appState.data.users.length
-      }));
-      
-    } catch (error) {
-      res.writeHead(400, { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      });
-      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(html);
+        return;
     }
-  });
-});
-
-// API - Get specific user
-router.get('/api/users/:id', (req, res, params) => {
-  const user = appState.data.users.find(u => u.id === params.id);
-  
-  res.writeHead(user ? 200 : 404, { 
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
-  });
-  
-  res.end(JSON.stringify(
-    user ? { user } : { error: 'User not found' }
-  ));
-});
-
-// Health check
-router.get('/health', (req, res) => {
-  res.writeHead(200, { 
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
-  });
-  
-  res.end(JSON.stringify({
-    status: 'healthy',
-    architecture: 'NEXUS AXION',
-    concept: 'Frontend essence absorbed in backend',
-    implementation: '100% Pure JavaScript',
-    dependencies: 'Zero external dependencies',
-    uptime: process.uptime(),
-    memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB'
-  }));
-});
-
-// ===== HTTP SERVER =====
-
-const server = http.createServer((req, res) => {
-  // Parse URL manually (no url.parse deprecation)
-  const urlParts = req.url.split('?');
-  const pathname = urlParts[0];
-  
-  console.log(`${req.method} ${pathname} - ${new Date().toISOString()}`);
-  
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.writeHead(200, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    });
-    res.end();
-    return;
-  }
-  
-  // Route matching
-  const handler = router.match(req.method, pathname);
-  
-  if (handler) {
-    try {
-      handler(req, res);
-    } catch (error) {
-      console.error('Route error:', error);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Internal server error' }));
+    
+    // API endpoints
+    if (url === '/api/users' && method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(dataStore.users));
+        return;
     }
-  } else {
+    
+    if (url.match(/^\/api\/users\/\d+$/) && method === 'GET') {
+        const id = parseInt(url.split('/')[3]);
+        const user = dataStore.users.find(u => u.id === id);
+        
+        if (user) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(user));
+        } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'User not found' }));
+        }
+        return;
+    }
+    
+    if (url === '/api/users' && method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const userData = JSON.parse(body);
+                const newUser = {
+                    id: dataStore.nextId++,
+                    name: userData.name,
+                    email: userData.email,
+                    created: Date.now()
+                };
+                
+                dataStore.users.push(newUser);
+                
+                res.writeHead(201, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(newUser));
+            } catch (error) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            }
+        });
+        return;
+    }
+    
+    if (url.match(/^\/api\/users\/\d+$/) && method === 'DELETE') {
+        const id = parseInt(url.split('/')[3]);
+        const index = dataStore.users.findIndex(u => u.id === id);
+        
+        if (index !== -1) {
+            dataStore.users.splice(index, 1);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+        } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'User not found' }));
+        }
+        return;
+    }
+    
+    // 404 for unknown routes
     res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      error: 'Route not found',
-      availableRoutes: Object.keys(router.routes)
-    }));
-  }
+    res.end(JSON.stringify({ error: 'Route not found' }));
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, () => {
-  console.log(`NEXUS AXION Server running on port ${PORT}`);
-  console.log(`Architecture: Frontend Essence → Backend Environment`);
-  console.log(`Implementation: 100% Pure JavaScript`);
-  console.log(`Dependencies: Zero external libraries`);
-  console.log(`Concept: Unified logic layer without frontend/backend separation`);
+    console.log(`🔮 NEXUS AXION - API as Components running on port ${PORT}`);
+    console.log(`Auto-generated ${apiSystem.components.size} components from API definitions`);
+    console.log('Architecture: API endpoints → Automatic UI components');
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('Shutting down gracefully...');
-  server.close(() => {
-    process.exit(0);
-  });
-});
-
-module.exports = { server, appState, events, router };
+module.exports = { server, apiSystem };
