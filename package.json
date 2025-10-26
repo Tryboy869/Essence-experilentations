@@ -1,23 +1,28 @@
 {
-  "name": "nexus-axion-api-components",
-  "version": "1.0.0",
-  "description": "NEXUS AXION - API as Components. Auto-generation of UI components from API endpoint definitions. Zero external dependencies.",
+  "name": "nexus-axion-ecommerce",
+  "version": "2.0.0",
+  "description": "E-commerce application with NEXUS AXION 2.0 tri-modular architecture",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "node app.js",
+    "test": "node app.js"
+  },
+  "engines": {
+    "node": ">=14.x"
   },
   "keywords": [
-    "nexus-axion",
-    "api-components",
-    "auto-generated-ui",
-    "zero-dependencies",
-    "api-to-components"
+    "nexus",
+    "axion",
+    "ecommerce",
+    "tri-modular",
+    "monolith",
+    "architecture"
   ],
-  "author": "NEXUS AXION Architecture",
+  "author": "Anzize Daouda",
   "license": "MIT",
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "dependencies": {},
-  "devDependencies": {}
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/nexus-axion-ecommerce"
+  }
 }
