@@ -1,777 +1,1183 @@
-// NEXUS AXION - API AS COMPONENTS ARCHITECTURE
-// Auto-generation of UI components from API endpoints
-// Pure JavaScript - Zero external dependencies
+#!/usr/bin/env node
+/**
+ * 🌌 NEXUS AXION 2.0 - E-commerce Application COMPLÈTE
+ * Architecture Tri-Modulaire en Mono-Fichier
+ * 
+ * Déploiement:
+ * 1. npm install (aucune dépendance requise!)
+ * 2. node app.js
+ * 3. Accéder via http://localhost:3000
+ * 
+ * Production: Deploy sur Render.com
+ */
 
 const http = require('http');
+const url = require('url');
+const crypto = require('crypto');
 
-// ===== CORE NEXUS SYSTEM - API ESSENCE ABSORBED =====
+const PORT = process.env.PORT || 3000;
 
-// API Schema Definition System
-class APISchema {
-    constructor(method, path, config = {}) {
-        this.method = method.toUpperCase();
-        this.path = path;
-        this.params = this.extractParams(path);
-        this.body = config.body || null;
-        this.response = config.response || null;
-        this.validation = config.validation || {};
-        this.meta = config.meta || {};
-    }
+// ============================================
+// 📦 MODULE 1: FRONTEND MODERNE
+// ============================================
+
+const FrontendModule = {
+  name: 'FrontendModule',
+  
+  pages: {
+    home: (state = {}) => `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>NEXUS Store - E-commerce</title>
+        <style>${FrontendModule.styles}</style>
+      </head>
+      <body>
+        ${FrontendModule.header(state)}
+        
+        <main class="container">
+          <section class="hero">
+            <h1>🛍️ Bienvenue sur NEXUS Store</h1>
+            <p>Architecture tri-modulaire NEXUS AXION 2.0</p>
+          </section>
+          
+          <section class="products">
+            <h2>📦 Nos Produits</h2>
+            <div class="grid">
+              ${state.products ? state.products.map(p => `
+                <div class="card">
+                  <div class="icon">📱</div>
+                  <h3>${p.name}</h3>
+                  <p class="price">${p.price}€</p>
+                  <p>${p.description}</p>
+                  <button onclick="addToCart('${p.id}')">Ajouter au panier</button>
+                </div>
+              `).join('') : '<p>Chargement...</p>'}
+            </div>
+          </section>
+        </main>
+        
+        ${FrontendModule.footer()}
+        <script>${FrontendModule.script(state)}</script>
+      </body>
+      </html>
+    `,
     
-    extractParams(path) {
-        const params = [];
-        const matches = path.match(/:(\w+)/g);
-        if (matches) {
-            matches.forEach(match => {
-                params.push(match.slice(1));
+    cart: (state = {}) => `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Panier - NEXUS Store</title>
+        <style>${FrontendModule.styles}</style>
+      </head>
+      <body>
+        ${FrontendModule.header(state)}
+        
+        <main class="container">
+          <h1>🛒 Votre Panier</h1>
+          
+          ${state.cart && state.cart.length > 0 ? `
+            <div class="cart-items">
+              ${state.cart.map(item => `
+                <div class="cart-item">
+                  <div>
+                    <h3>${item.name}</h3>
+                    <p>${item.price}€</p>
+                  </div>
+                  <div class="qty">
+                    <button onclick="updateQty('${item.id}', ${item.quantity - 1})">-</button>
+                    <span>${item.quantity}</span>
+                    <button onclick="updateQty('${item.id}', ${item.quantity + 1})">+</button>
+                  </div>
+                  <button onclick="removeItem('${item.id}')">❌</button>
+                </div>
+              `).join('')}
+              
+              <div class="total">
+                <h3>Total: ${state.total}€</h3>
+                <button onclick="checkout()">Commander</button>
+              </div>
+            </div>
+          ` : `
+            <div class="empty">
+              <p>Panier vide</p>
+              <a href="/">Continuer mes achats</a>
+            </div>
+          `}
+        </main>
+        
+        ${FrontendModule.footer()}
+        <script>${FrontendModule.script(state)}</script>
+      </body>
+      </html>
+    `,
+    
+    login: (state = {}) => `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Connexion - NEXUS Store</title>
+        <style>${FrontendModule.styles}</style>
+      </head>
+      <body>
+        ${FrontendModule.header(state)}
+        
+        <main class="container">
+          <div class="form-box">
+            <h1>🔐 Connexion</h1>
+            ${state.error ? `<div class="error">${state.error}</div>` : ''}
+            
+            <form id="loginForm">
+              <input type="email" name="email" placeholder="Email" required>
+              <input type="password" name="password" placeholder="Mot de passe" required>
+              <button type="submit">Se connecter</button>
+            </form>
+            
+            <p>Pas de compte ? <a href="/register">S'inscrire</a></p>
+          </div>
+        </main>
+        
+        ${FrontendModule.footer()}
+        <script>
+          document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = new FormData(e.target);
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                email: data.get('email'),
+                password: data.get('password')
+              })
             });
-        }
-        return params;
-    }
+            const result = await res.json();
+            if (result.success) {
+              window.location.href = '/dashboard';
+            } else {
+              alert('❌ ' + result.error);
+            }
+          };
+        </script>
+      </body>
+      </html>
+    `,
     
-    generateId() {
-        return `${this.method}_${this.path.replace(/[/:]/g, '_')}`;
-    }
-}
-
-// Component Auto-Generator from API
-class APIComponentGenerator {
-    constructor() {
-        this.components = new Map();
-        this.schemas = new Map();
-    }
-    
-    // Define API endpoint and auto-generate component
-    defineAPI(method, path, config = {}) {
-        const schema = new APISchema(method, path, config);
-        const componentId = schema.generateId();
+    register: (state = {}) => `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Inscription - NEXUS Store</title>
+        <style>${FrontendModule.styles}</style>
+      </head>
+      <body>
+        ${FrontendModule.header(state)}
         
-        this.schemas.set(componentId, schema);
+        <main class="container">
+          <div class="form-box">
+            <h1>📝 Inscription</h1>
+            
+            <form id="registerForm">
+              <input type="text" name="name" placeholder="Nom complet" required>
+              <input type="email" name="email" placeholder="Email" required>
+              <input type="password" name="password" placeholder="Mot de passe" required>
+              <button type="submit">S'inscrire</button>
+            </form>
+            
+            <p>Déjà un compte ? <a href="/login">Se connecter</a></p>
+          </div>
+        </main>
         
-        // Auto-generate component based on HTTP method
-        let component;
-        switch (method.toUpperCase()) {
-            case 'GET':
-                component = this.generateDisplayComponent(schema);
-                break;
-            case 'POST':
-                component = this.generateFormComponent(schema);
-                break;
-            case 'PUT':
-                component = this.generateEditComponent(schema);
-                break;
-            case 'DELETE':
-                component = this.generateDeleteComponent(schema);
-                break;
-            default:
-                component = this.generateGenericComponent(schema);
-        }
+        ${FrontendModule.footer()}
+        <script>
+          document.getElementById('registerForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = new FormData(e.target);
+            const res = await fetch('/api/auth/register', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                name: data.get('name'),
+                email: data.get('email'),
+                password: data.get('password')
+              })
+            });
+            const result = await res.json();
+            if (result.success) {
+              alert('✅ Inscription réussie !');
+              window.location.href = '/login';
+            } else {
+              alert('❌ ' + result.error);
+            }
+          };
+        </script>
+      </body>
+      </html>
+    `,
+    
+    dashboard: (state = {}) => `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Dashboard - NEXUS Store</title>
+        <style>${FrontendModule.styles}</style>
+      </head>
+      <body>
+        ${FrontendModule.header(state)}
         
-        this.components.set(componentId, component);
-        return component;
+        <main class="container">
+          <h1>📊 Dashboard</h1>
+          
+          <div class="stats">
+            <div class="stat">
+              <h3>Commandes</h3>
+              <p>${state.stats?.orders || 0}</p>
+            </div>
+            <div class="stat">
+              <h3>Produits</h3>
+              <p>${state.stats?.products || 0}</p>
+            </div>
+            <div class="stat">
+              <h3>Utilisateurs</h3>
+              <p>${state.stats?.users || 0}</p>
+            </div>
+            <div class="stat">
+              <h3>Cache Hit</h3>
+              <p>${state.stats?.cacheHitRate || '0%'}</p>
+            </div>
+          </div>
+          
+          <div class="info">
+            <h2>⚙️ Système NEXUS AXION 2.0</h2>
+            <pre>${JSON.stringify(state.systemInfo, null, 2)}</pre>
+          </div>
+        </main>
+        
+        ${FrontendModule.footer()}
+      </body>
+      </html>
+    `
+  },
+  
+  header: (state) => `
+    <header>
+      <div class="container">
+        <a href="/" class="logo">🌌 NEXUS Store</a>
+        <nav>
+          <a href="/">Accueil</a>
+          <a href="/cart">Panier ${state.cartCount ? `(${state.cartCount})` : ''}</a>
+          ${state.user ? `
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout">Déconnexion</a>
+          ` : `
+            <a href="/login">Connexion</a>
+          `}
+        </nav>
+      </div>
+    </header>
+  `,
+  
+  footer: () => `
+    <footer>
+      <p>🌌 NEXUS AXION 2.0 - Architecture Tri-Modulaire</p>
+    </footer>
+  `,
+  
+  script: (state) => `
+    async function addToCart(productId) {
+      const res = await fetch('/api/cart/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({productId})
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert('✅ Ajouté au panier !');
+        location.reload();
+      } else {
+        alert('❌ ' + result.error);
+      }
     }
     
-    // GET endpoint → Display component with loading/error states
-    generateDisplayComponent(schema) {
-        return {
-            type: 'display',
-            schema: schema,
-            state: {
-                data: null,
-                loading: false,
-                error: null
-            },
-            
-            async fetch(params = {}) {
-                this.state.loading = true;
-                this.state.error = null;
-                
-                try {
-                    let url = schema.path;
-                    // Replace path parameters
-                    schema.params.forEach(param => {
-                        if (params[param]) {
-                            url = url.replace(`:${param}`, params[param]);
-                        }
-                    });
-                    
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    this.state.data = await response.json();
-                    this.state.loading = false;
-                    
-                    return this.render();
-                } catch (error) {
-                    this.state.error = error.message;
-                    this.state.loading = false;
-                    return this.render();
-                }
-            },
-            
-            render() {
-                if (this.state.loading) {
-                    return this.renderLoading();
-                }
-                if (this.state.error) {
-                    return this.renderError();
-                }
-                if (this.state.data) {
-                    return this.renderData();
-                }
-                return this.renderEmpty();
-            },
-            
-            renderLoading() {
-                return `
-                    <div class="api-component loading" data-endpoint="${schema.method} ${schema.path}">
-                        <div class="spinner"></div>
-                        <p>Loading ${schema.path}...</p>
-                    </div>
-                `;
-            },
-            
-            renderError() {
-                return `
-                    <div class="api-component error" data-endpoint="${schema.method} ${schema.path}">
-                        <div class="error-icon">⚠️</div>
-                        <p>Error: ${this.state.error}</p>
-                        <button onclick="this.parentElement.component.fetch()">Retry</button>
-                    </div>
-                `;
-            },
-            
-            renderData() {
-                const data = this.state.data;
-                let content = '';
-                
-                if (Array.isArray(data)) {
-                    content = `
-                        <div class="data-list">
-                            ${data.map(item => `
-                                <div class="data-item">
-                                    ${this.renderObject(item)}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                } else {
-                    content = this.renderObject(data);
-                }
-                
-                return `
-                    <div class="api-component success" data-endpoint="${schema.method} ${schema.path}">
-                        <div class="component-header">
-                            <h3>${schema.method} ${schema.path}</h3>
-                            <button onclick="this.closest('.api-component').component.fetch()">🔄</button>
-                        </div>
-                        ${content}
-                    </div>
-                `;
-            },
-            
-            renderObject(obj) {
-                return `
-                    <div class="object-display">
-                        ${Object.entries(obj).map(([key, value]) => `
-                            <div class="field">
-                                <span class="key">${key}:</span>
-                                <span class="value">${typeof value === 'object' ? JSON.stringify(value) : value}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            },
-            
-            renderEmpty() {
-                return `
-                    <div class="api-component empty" data-endpoint="${schema.method} ${schema.path}">
-                        <p>No data available</p>
-                        <button onclick="this.parentElement.component.fetch()">Load Data</button>
-                    </div>
-                `;
-            }
-        };
+    async function updateQty(productId, quantity) {
+      if (quantity < 1) return removeItem(productId);
+      const res = await fetch('/api/cart/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({productId, quantity})
+      });
+      if (res.ok) location.reload();
     }
     
-    // POST endpoint → Form component with validation
-    generateFormComponent(schema) {
-        return {
-            type: 'form',
-            schema: schema,
-            state: {
-                formData: {},
-                submitting: false,
-                success: false,
-                error: null
-            },
-            
-            async submit(formData) {
-                this.state.submitting = true;
-                this.state.error = null;
-                this.state.success = false;
-                
-                try {
-                    const response = await fetch(schema.path, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(formData)
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    const result = await response.json();
-                    this.state.success = true;
-                    this.state.submitting = false;
-                    this.state.formData = {};
-                    
-                    return this.render();
-                } catch (error) {
-                    this.state.error = error.message;
-                    this.state.submitting = false;
-                    return this.render();
-                }
-            },
-            
-            render() {
-                const fields = this.generateFields();
-                
-                return `
-                    <div class="api-component form" data-endpoint="${schema.method} ${schema.path}">
-                        <div class="component-header">
-                            <h3>Create ${schema.path.split('/').pop()}</h3>
-                        </div>
-                        
-                        ${this.state.success ? `
-                            <div class="success-message">
-                                ✅ Successfully created!
-                            </div>
-                        ` : ''}
-                        
-                        ${this.state.error ? `
-                            <div class="error-message">
-                                ⚠️ ${this.state.error}
-                            </div>
-                        ` : ''}
-                        
-                        <form class="api-form" onsubmit="return this.closest('.api-component').component.handleSubmit(event)">
-                            ${fields}
-                            <div class="form-actions">
-                                <button type="submit" ${this.state.submitting ? 'disabled' : ''}>
-                                    ${this.state.submitting ? 'Creating...' : 'Create'}
-                                </button>
-                                <button type="reset">Clear</button>
-                            </div>
-                        </form>
-                    </div>
-                `;
-            },
-            
-            generateFields() {
-                // Auto-generate form fields based on schema or common patterns
-                const resource = schema.path.split('/').pop();
-                
-                // Common fields for different resources
-                const fieldTemplates = {
-                    users: ['name', 'email', 'role'],
-                    posts: ['title', 'content', 'tags'],
-                    products: ['name', 'price', 'description'],
-                    default: ['name', 'description']
-                };
-                
-                const fields = fieldTemplates[resource] || fieldTemplates.default;
-                
-                return fields.map(field => `
-                    <div class="form-field">
-                        <label for="${field}">${field.charAt(0).toUpperCase() + field.slice(1)}</label>
-                        <input 
-                            type="${field === 'email' ? 'email' : field === 'price' ? 'number' : 'text'}"
-                            id="${field}"
-                            name="${field}"
-                            required
-                            ${field === 'content' || field === 'description' ? 'placeholder="Enter detailed information..."' : ''}
-                        />
-                    </div>
-                `).join('');
-            },
-            
-            handleSubmit(event) {
-                event.preventDefault();
-                const formData = new FormData(event.target);
-                const data = Object.fromEntries(formData);
-                this.submit(data);
-                return false;
-            }
-        };
+    async function removeItem(productId) {
+      const res = await fetch('/api/cart/remove', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({productId})
+      });
+      if (res.ok) location.reload();
     }
     
-    // DELETE endpoint → Confirmation component
-    generateDeleteComponent(schema) {
-        return {
-            type: 'delete',
-            schema: schema,
-            state: {
-                confirming: false,
-                deleting: false,
-                success: false,
-                error: null
-            },
-            
-            async delete(params = {}) {
-                this.state.deleting = true;
-                this.state.error = null;
-                
-                try {
-                    let url = schema.path;
-                    schema.params.forEach(param => {
-                        if (params[param]) {
-                            url = url.replace(`:${param}`, params[param]);
-                        }
-                    });
-                    
-                    const response = await fetch(url, { method: 'DELETE' });
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    this.state.success = true;
-                    this.state.deleting = false;
-                    this.state.confirming = false;
-                    
-                    return this.render();
-                } catch (error) {
-                    this.state.error = error.message;
-                    this.state.deleting = false;
-                    return this.render();
-                }
-            },
-            
-            render() {
-                if (this.state.success) {
-                    return `
-                        <div class="api-component delete success" data-endpoint="${schema.method} ${schema.path}">
-                            <div class="success-message">
-                                ✅ Successfully deleted!
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                return `
-                    <div class="api-component delete" data-endpoint="${schema.method} ${schema.path}">
-                        ${this.state.error ? `
-                            <div class="error-message">⚠️ ${this.state.error}</div>
-                        ` : ''}
-                        
-                        ${this.state.confirming ? `
-                            <div class="confirmation-dialog">
-                                <p>Are you sure you want to delete this item?</p>
-                                <div class="confirmation-actions">
-                                    <button 
-                                        class="danger" 
-                                        onclick="this.closest('.api-component').component.confirmDelete()"
-                                        ${this.state.deleting ? 'disabled' : ''}
-                                    >
-                                        ${this.state.deleting ? 'Deleting...' : 'Yes, Delete'}
-                                    </button>
-                                    <button onclick="this.closest('.api-component').component.cancelDelete()">
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        ` : `
-                            <button 
-                                class="danger" 
-                                onclick="this.closest('.api-component').component.startDelete()"
-                            >
-                                🗑️ Delete
-                            </button>
-                        `}
-                    </div>
-                `;
-            },
-            
-            startDelete() {
-                this.state.confirming = true;
-                this.updateDOM();
-            },
-            
-            cancelDelete() {
-                this.state.confirming = false;
-                this.updateDOM();
-            },
-            
-            confirmDelete(params) {
-                this.delete(params);
-            },
-            
-            updateDOM() {
-                // Re-render component in place
-                const element = document.querySelector(`[data-endpoint="${schema.method} ${schema.path}"]`);
-                if (element) {
-                    element.outerHTML = this.render();
-                    this.attachToDOM();
-                }
-            }
-        };
+    async function checkout() {
+      const res = await fetch('/api/orders/create', {method: 'POST'});
+      const result = await res.json();
+      if (result.success) {
+        alert('✅ Commande créée ! ID: ' + result.orderId);
+        location.href = '/dashboard';
+      } else {
+        alert('❌ ' + result.error);
+      }
+    }
+  `,
+  
+  styles: `
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    
+    /* Header */
+    header {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      text-decoration: none;
+      color: #667eea;
+    }
+    nav { display: flex; gap: 20px; }
+    nav a {
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+    nav a:hover { color: #667eea; }
+    
+    /* Hero */
+    .hero {
+      background: white;
+      border-radius: 20px;
+      padding: 60px 40px;
+      text-align: center;
+      margin: 40px 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .hero h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
     
-    generateGenericComponent(schema) {
-        return {
-            type: 'generic',
-            schema: schema,
-            render() {
-                return `
-                    <div class="api-component generic" data-endpoint="${schema.method} ${schema.path}">
-                        <h3>${schema.method} ${schema.path}</h3>
-                        <p>Generic API component</p>
-                        <pre>${JSON.stringify(schema, null, 2)}</pre>
-                    </div>
-                `;
-            }
-        };
+    /* Products */
+    .products {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      margin: 40px 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .products h2 { margin-bottom: 30px; font-size: 32px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 30px;
+    }
+    .card {
+      background: #f8f9fa;
+      border-radius: 15px;
+      padding: 25px;
+      text-align: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .icon { font-size: 64px; margin-bottom: 15px; }
+    .card h3 { margin-bottom: 10px; }
+    .price {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+      margin: 10px 0;
     }
     
-    // Get component by endpoint
-    getComponent(method, path) {
-        const id = `${method.toUpperCase()}_${path.replace(/[/:]/g, '_')}`;
-        return this.components.get(id);
+    button, .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button:hover, .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(102,126,234,0.4);
     }
     
-    // Render all components as HTML page
-    renderAllComponents() {
-        const componentsHTML = Array.from(this.components.values())
-            .map(component => component.render())
-            .join('\n');
-            
-        return componentsHTML;
+    /* Cart */
+    .cart-items {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      margin: 40px 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
     }
-}
-
-// ===== APPLICATION SETUP =====
-
-// Initialize the API-to-Components system
-const apiSystem = new APIComponentGenerator();
-
-// Define your APIs - components auto-generate
-const userListComponent = apiSystem.defineAPI('GET', '/api/users', {
-    response: { type: 'array', items: { id: 'number', name: 'string', email: 'string' } }
-});
-
-const userDetailComponent = apiSystem.defineAPI('GET', '/api/users/:id', {
-    response: { id: 'number', name: 'string', email: 'string', created: 'date' }
-});
-
-const createUserComponent = apiSystem.defineAPI('POST', '/api/users', {
-    body: { name: 'string', email: 'string' },
-    response: { id: 'number', name: 'string', email: 'string', created: 'date' }
-});
-
-const deleteUserComponent = apiSystem.defineAPI('DELETE', '/api/users/:id');
-
-// Mock data store
-const dataStore = {
-    users: [
-        { id: 1, name: 'Alice', email: 'alice@example.com', created: Date.now() },
-        { id: 2, name: 'Bob', email: 'bob@example.com', created: Date.now() }
-    ],
-    nextId: 3
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .qty {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    .qty button {
+      width: 35px;
+      height: 35px;
+      padding: 0;
+      border-radius: 50%;
+    }
+    .total {
+      text-align: right;
+      padding: 30px 20px 0;
+      border-top: 2px solid #667eea;
+      margin-top: 20px;
+    }
+    .total h3 { font-size: 28px; margin-bottom: 20px; }
+    
+    .empty {
+      background: white;
+      border-radius: 20px;
+      padding: 80px 40px;
+      text-align: center;
+      margin: 40px 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .empty p { font-size: 20px; margin-bottom: 30px; color: #666; }
+    
+    /* Forms */
+    .form-box {
+      background: white;
+      border-radius: 20px;
+      padding: 50px;
+      max-width: 500px;
+      margin: 60px auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .form-box h1 { text-align: center; margin-bottom: 40px; }
+    .form-box input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .form-box input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .form-box button { width: 100%; margin-top: 10px; }
+    .form-box p { text-align: center; margin-top: 20px; color: #666; }
+    .form-box a { color: #667eea; text-decoration: none; font-weight: 600; }
+    
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    /* Dashboard */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 40px 0;
+    }
+    .stat {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .stat h3 { color: #666; margin-bottom: 15px; }
+    .stat p { font-size: 36px; font-weight: bold; color: #667eea; }
+    
+    .info {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      margin: 20px 0;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .info pre {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    
+    /* Footer */
+    footer {
+      background: rgba(255,255,255,0.95);
+      margin-top: 60px;
+      padding: 30px 0;
+      text-align: center;
+      color: #666;
+    }
+    
+    @media (max-width: 768px) {
+      header .container { flex-direction: column; gap: 15px; }
+      nav { flex-wrap: wrap; justify-content: center; }
+      .hero h1 { font-size: 32px; }
+      .grid { grid-template-columns: 1fr; }
+      .form-box { padding: 30px 20px; }
+    }
+  `
 };
 
-// ===== HTTP SERVER =====
+// ============================================
+// ⚙️ MODULE 2: BACKEND PUISSANT
+// ============================================
 
-const server = http.createServer((req, res) => {
-    const url = req.url;
-    const method = req.method;
+const BackendModule = {
+  name: 'BackendModule',
+  
+  security: {
+    rateLimit: new Map(),
+    auditLog: [],
     
-    console.log(`${method} ${url}`);
+    checkRateLimit(clientId, max = 100) {
+      const now = Date.now();
+      const client = this.rateLimit.get(clientId) || { count: 0, reset: now + 60000 };
+      if (now > client.reset) {
+        client.count = 0;
+        client.reset = now + 60000;
+      }
+      client.count++;
+      this.rateLimit.set(clientId, client);
+      return client.count <= max;
+    },
     
-    // CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
-    if (method === 'OPTIONS') {
-        res.writeHead(200);
-        res.end();
-        return;
+    audit(action, data) {
+      this.auditLog.push({
+        timestamp: new Date().toISOString(),
+        action,
+        data
+      });
     }
-    
-    // Main page - render all auto-generated components
-    if (url === '/') {
-        const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>NEXUS AXION - API as Components</title>
-    <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            margin: 0;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            min-height: 100vh;
+  },
+  
+  modules: {
+    auth: {
+      users: new Map(),
+      sessions: new Map(),
+      
+      register(data) {
+        const { name, email, password } = data;
+        if (this.users.has(email)) {
+          return { success: false, error: 'Email déjà utilisé' };
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        h1 {
-            font-size: 3em;
-            margin: 0;
-            background: linear-gradient(45deg, #fff, #ffd700);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .subtitle {
-            font-size: 1.2em;
-            opacity: 0.9;
-            margin-top: 10px;
-        }
-        .api-component {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        .component-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        .api-form {
-            display: grid;
-            gap: 15px;
-        }
-        .form-field {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-field label {
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-field input {
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-        }
-        .form-field input::placeholder {
-            color: rgba(255,255,255,0.6);
-        }
-        .form-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.2s;
-        }
-        button:hover {
-            transform: scale(1.05);
-        }
-        button[type="submit"] {
-            background: #4CAF50;
-            color: white;
-        }
-        button.danger {
-            background: #f44336;
-            color: white;
-        }
-        .success-message {
-            background: #4CAF50;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-        .error-message {
-            background: #f44336;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-        .data-list {
-            display: grid;
-            gap: 10px;
-        }
-        .data-item {
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 10px;
-        }
-        .object-display {
-            display: grid;
-            gap: 8px;
-        }
-        .field {
-            display: flex;
-            justify-content: space-between;
-        }
-        .key {
-            font-weight: bold;
-            color: #ffd700;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px;
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid #ffd700;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔮 NEXUS AXION</h1>
-            <p class="subtitle">API as Components - Auto-Generated UI</p>
-        </div>
-        
-        <div id="components-container">
-            ${apiSystem.renderAllComponents()}
-        </div>
-    </div>
-    
-    <script>
-        // Attach component instances to DOM elements
-        document.addEventListener('DOMContentLoaded', function() {
-            const components = document.querySelectorAll('.api-component');
-            components.forEach(element => {
-                const endpoint = element.getAttribute('data-endpoint');
-                if (endpoint) {
-                    const [method, path] = endpoint.split(' ');
-                    // This would attach the actual component instance
-                    console.log('Component for:', method, path);
-                }
-            });
+        const userId = crypto.randomBytes(16).toString('hex');
+        this.users.set(email, {
+          id: userId,
+          name,
+          email,
+          password: crypto.createHash('sha256').update(password).digest('hex'),
+          createdAt: Date.now()
         });
+        return { success: true, userId };
+      },
+      
+      login(data) {
+        const { email, password } = data;
+        const user = this.users.get(email);
+        if (!user) {
+          return { success: false, error: 'Identifiants invalides' };
+        }
+        const hash = crypto.createHash('sha256').update(password).digest('hex');
+        if (user.password !== hash) {
+          return { success: false, error: 'Identifiants invalides' };
+        }
+        const sessionId = crypto.randomBytes(32).toString('hex');
+        this.sessions.set(sessionId, {
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          createdAt: Date.now()
+        });
+        return { success: true, sessionId, user: { id: user.id, name: user.name, email: user.email } };
+      },
+      
+      validateSession(sessionId) {
+        return this.sessions.has(sessionId) ? this.sessions.get(sessionId) : null;
+      },
+      
+      logout(sessionId) {
+        this.sessions.delete(sessionId);
+        return { success: true };
+      }
+    },
+    
+    products: {
+      catalog: new Map([
+        ['prod_001', { id: 'prod_001', name: 'iPhone 15 Pro', price: 1199, description: 'Puce A17 Pro', stock: 50 }],
+        ['prod_002', { id: 'prod_002', name: 'MacBook Air M3', price: 1299, description: 'Ultra-léger', stock: 30 }],
+        ['prod_003', { id: 'prod_003', name: 'iPad Pro', price: 899, description: 'Avec M2', stock: 40 }],
+        ['prod_004', { id: 'prod_004', name: 'AirPods Pro', price: 279, description: 'Réduction bruit', stock: 100 }],
+        ['prod_005', { id: 'prod_005', name: 'Apple Watch Ultra', price: 899, description: 'Montre extrême', stock: 25 }],
+        ['prod_006', { id: 'prod_006', name: 'Magic Keyboard', price: 149, description: 'Clavier premium', stock: 60 }]
+      ]),
+      
+      getAll() {
+        return { success: true, products: Array.from(this.catalog.values()) };
+      },
+      
+      getById(id) {
+        const product = this.catalog.get(id);
+        if (!product) return { success: false, error: 'Produit introuvable' };
+        return { success: true, product };
+      }
+    },
+    
+    cart: {
+      carts: new Map(),
+      
+      getCart(sessionId) {
+        if (!this.carts.has(sessionId)) {
+          this.carts.set(sessionId, { items: [], total: 0 });
+        }
+        return this.carts.get(sessionId);
+      },
+      
+      addItem(sessionId, productId) {
+        const productResult = BackendModule.modules.products.getById(productId);
+        if (!productResult.success) return productResult;
         
-        // Global helper functions for component interactions
-        window.apiSystem = {
-            async fetchComponent(method, path, params) {
-                // Implementation for fetching data
-                console.log('Fetching:', method, path, params);
-            },
-            
-            async submitForm(method, path, formData) {
-                // Implementation for form submission
-                console.log('Submitting:', method, path, formData);
-            }
+        const cart = this.getCart(sessionId);
+        const existing = cart.items.find(item => item.id === productId);
+        
+        if (existing) {
+          existing.quantity += 1;
+        } else {
+          cart.items.push({
+            id: productId,
+            name: productResult.product.name,
+            price: productResult.product.price,
+            quantity: 1
+          });
+        }
+        
+        this.updateTotal(cart);
+        return { success: true, cart };
+      },
+      
+      updateItem(sessionId, productId, quantity) {
+        const cart = this.getCart(sessionId);
+        const item = cart.items.find(i => i.id === productId);
+        if (!item) return { success: false, error: 'Item introuvable' };
+        if (quantity <= 0) return this.removeItem(sessionId, productId);
+        item.quantity = quantity;
+        this.updateTotal(cart);
+        return { success: true, cart };
+      },
+      
+      removeItem(sessionId, productId) {
+        const cart = this.getCart(sessionId);
+        cart.items = cart.items.filter(i => i.id !== productId);
+        this.updateTotal(cart);
+        return { success: true, cart };
+      },
+      
+      updateTotal(cart) {
+        cart.total = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      },
+      
+      clearCart(sessionId) {
+        this.carts.set(sessionId, { items: [], total: 0 });
+        return { success: true };
+      }
+    },
+    
+    orders: {
+      orders: new Map(),
+      
+      createOrder(sessionId) {
+        const cart = BackendModule.modules.cart.getCart(sessionId);
+        if (cart.items.length === 0) {
+          return { success: false, error: 'Panier vide' };
+        }
+        const orderId = `order_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+        const order = {
+          id: orderId,
+          sessionId,
+          items: [...cart.items],
+          total: cart.total,
+          status: 'pending',
+          createdAt: Date.now()
         };
-    </script>
-</body>
-</html>`;
-        
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(html);
-        return;
-    }
+        this.orders.set(orderId, order);
+        BackendModule.modules.cart.clearCart(sessionId);
+        return { success: true, orderId, order };
+      },
+      
+      getAllOrders() {
+        return { success: true, orders: Array.from(this.orders.values()) };
+      }
+    },
     
-    // API endpoints
-    if (url === '/api/users' && method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(dataStore.users));
-        return;
-    }
-    
-    if (url.match(/^\/api\/users\/\d+$/) && method === 'GET') {
-        const id = parseInt(url.split('/')[3]);
-        const user = dataStore.users.find(u => u.id === id);
-        
-        if (user) {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(user));
-        } else {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'User not found' }));
-        }
-        return;
-    }
-    
-    if (url === '/api/users' && method === 'POST') {
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', () => {
-            try {
-                const userData = JSON.parse(body);
-                const newUser = {
-                    id: dataStore.nextId++,
-                    name: userData.name,
-                    email: userData.email,
-                    created: Date.now()
-                };
-                
-                dataStore.users.push(newUser);
-                
-                res.writeHead(201, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(newUser));
-            } catch (error) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Invalid JSON' }));
-            }
+    analytics: {
+      events: [],
+      
+      track(event, props) {
+        this.events.push({ event, props, timestamp: Date.now() });
+        return { success: true };
+      },
+      
+      getStats() {
+        const counts = {};
+        this.events.forEach(e => {
+          counts[e.event] = (counts[e.event] || 0) + 1;
         });
-        return;
+        return { totalEvents: this.events.length, eventCounts: counts };
+      }
     }
+  }
+};
+
+// ============================================
+// 🔌 MODULE 3: CONNECTEUR INTELLIGENT
+// ============================================
+
+const ConnectorModule = {
+  name: 'ConnectorModule',
+  
+  cache: {
+    L1: new Map(),
+    L2: new Map(),
+    L3: new Map(),
+    stats: { hits: { L1: 0, L2: 0, L3: 0 }, misses: 0 },
     
-    if (url.match(/^\/api\/users\/\d+$/) && method === 'DELETE') {
-        const id = parseInt(url.split('/')[3]);
-        const index = dataStore.users.findIndex(u => u.id === id);
-        
-        if (index !== -1) {
-            dataStore.users.splice(index, 1);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true }));
-        } else {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'User not found' }));
+    get(key) {
+      if (this.L1.has(key)) {
+        const entry = this.L1.get(key);
+        if (this.isValid(entry, 60000)) {
+          this.stats.hits.L1++;
+          return entry.value;
         }
-        return;
+      }
+      if (this.L2.has(key)) {
+        const entry = this.L2.get(key);
+        if (this.isValid(entry, 300000)) {
+          this.stats.hits.L2++;
+          this.L1.set(key, entry);
+          return entry.value;
+        }
+      }
+      if (this.L3.has(key)) {
+        const entry = this.L3.get(key);
+        if (this.isValid(entry, 3600000)) {
+          this.stats.hits.L3++;
+          this.L2.set(key, entry);
+          return entry.value;
+        }
+      }
+      this.stats.misses++;
+      return null;
+    },
+    
+    set(key, value, level = 'L1') {
+      this[level].set(key, { value, createdAt: Date.now() });
+    },
+    
+    isValid(entry, ttl) {
+      return (Date.now() - entry.createdAt) < ttl;
+    },
+    
+    getStats() {
+      const total = this.stats.hits.L1 + this.stats.hits.L2 + this.stats.hits.L3 + this.stats.misses;
+      const hitRate = total > 0 ? ((this.stats.hits.L1 + this.stats.hits.L2 + this.stats.hits.L3) / total * 100).toFixed(2) : 0;
+      return {
+        hitRate: `${hitRate}%`,
+        hits: this.stats.hits,
+        misses: this.stats.misses,
+        sizes: { L1: this.L1.size, L2: this.L2.size, L3: this.L3.size }
+      };
+    }
+  },
+  
+  sessions: {
+    getSessionId(req) {
+      const cookies = this.parseCookies(req.headers.cookie || '');
+      return cookies.sessionId || null;
+    },
+    
+    parseCookies(cookieString) {
+      const cookies = {};
+      cookieString.split(';').forEach(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        if (name) cookies[name] = value;
+      });
+      return cookies;
+    },
+    
+    createCookie(name, value, maxAge = 86400) {
+      return `${name}=${value}; Path=/; HttpOnly; Max-Age=${maxAge}; SameSite=Lax`;
+    }
+  }
+};
+
+// ============================================
+// 🌟 SYSTÈME UNIFIÉ NEXUS AXION 2.0
+// ============================================
+
+const NexusAxion = {
+  version: '2.0.0',
+  
+  frontend: FrontendModule,
+  backend: BackendModule,
+  connector: ConnectorModule,
+  
+  async handleRequest(req, res) {
+    const parsedUrl = url.parse(req.url, true);
+    const pathname = parsedUrl.pathname;
+    const sessionId = this.connector.sessions.getSessionId(req);
+    
+    // Track analytics
+    this.backend.modules.analytics.track('page_view', { path: pathname });
+    
+    // API Routes
+    if (pathname.startsWith('/api/')) {
+      return this.handleAPI(req, res, parsedUrl, sessionId);
     }
     
-    // 404 for unknown routes
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Route not found' }));
+    // Page Routes
+    return this.handlePage(req, res, pathname, sessionId);
+  },
+  
+  async handlePage(req, res, pathname, sessionId) {
+    let page, state = {};
+    
+    // Get user session
+    const session = sessionId ? this.backend.modules.auth.validateSession(sessionId) : null;
+    if (session) {
+      state.user = { name: session.name, email: session.email };
+    }
+    
+    // Get cart info
+    const cart = this.backend.modules.cart.getCart(sessionId || 'guest');
+    state.cartCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Route handling
+    switch (pathname) {
+      case '/':
+        const productsResult = this.backend.modules.products.getAll();
+        state.products = productsResult.products;
+        page = this.frontend.pages.home(state);
+        break;
+        
+      case '/cart':
+        state.cart = cart.items;
+        state.total = cart.total;
+        page = this.frontend.pages.cart(state);
+        break;
+        
+      case '/login':
+        page = this.frontend.pages.login(state);
+        break;
+        
+      case '/register':
+        page = this.frontend.pages.register(state);
+        break;
+        
+      case '/dashboard':
+        if (!session) {
+          res.writeHead(302, { 'Location': '/login' });
+          return res.end();
+        }
+        
+        state.stats = {
+          orders: this.backend.modules.orders.orders.size,
+          products: this.backend.modules.products.catalog.size,
+          users: this.backend.modules.auth.users.size,
+          cacheHitRate: this.connector.cache.getStats().hitRate
+        };
+        
+        state.systemInfo = {
+          version: this.version,
+          architecture: 'Tri-Modulaire',
+          modules: {
+            frontend: 'Active',
+            backend: 'Active',
+            connector: 'Active'
+          },
+          cache: this.connector.cache.getStats(),
+          analytics: this.backend.modules.analytics.getStats()
+        };
+        
+        page = this.frontend.pages.dashboard(state);
+        break;
+        
+      case '/logout':
+        if (sessionId) {
+          this.backend.modules.auth.logout(sessionId);
+        }
+        res.writeHead(302, { 
+          'Location': '/',
+          'Set-Cookie': this.connector.sessions.createCookie('sessionId', '', 0)
+        });
+        return res.end();
+        
+      default:
+        page = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>404 - NEXUS Store</title>
+            <style>${this.frontend.styles}</style>
+          </head>
+          <body>
+            ${this.frontend.header(state)}
+            <main class="container">
+              <div class="empty">
+                <h1>404</h1>
+                <p>Page introuvable</p>
+                <a href="/">Retour à l'accueil</a>
+              </div>
+            </main>
+            ${this.frontend.footer()}
+          </body>
+          </html>
+        `;
+    }
+    
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(page);
+  },
+  
+  async handleAPI(req, res, parsedUrl, sessionId) {
+    const pathname = parsedUrl.pathname;
+    
+    // Rate limiting
+    const clientId = req.socket.remoteAddress;
+    if (!this.backend.security.checkRateLimit(clientId)) {
+      res.writeHead(429, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, error: 'Rate limit exceeded' }));
+    }
+    
+    // Parse body for POST requests
+    let body = {};
+    if (req.method === 'POST') {
+      body = await this.parseBody(req);
+    }
+    
+    let result;
+    
+    // API endpoint routing
+    switch (pathname) {
+      // Auth endpoints
+      case '/api/auth/register':
+        result = this.backend.modules.auth.register(body);
+        this.backend.security.audit('AUTH_REGISTER', { email: body.email, success: result.success });
+        break;
+        
+      case '/api/auth/login':
+        result = this.backend.modules.auth.login(body);
+        this.backend.security.audit('AUTH_LOGIN', { email: body.email, success: result.success });
+        if (result.success) {
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Set-Cookie': this.connector.sessions.createCookie('sessionId', result.sessionId)
+          });
+          return res.end(JSON.stringify(result));
+        }
+        break;
+        
+      // Cart endpoints
+      case '/api/cart/add':
+        if (!sessionId) sessionId = 'guest';
+        result = this.backend.modules.cart.addItem(sessionId, body.productId);
+        this.backend.security.audit('CART_ADD', { productId: body.productId, sessionId });
+        break;
+        
+      case '/api/cart/update':
+        if (!sessionId) sessionId = 'guest';
+        result = this.backend.modules.cart.updateItem(sessionId, body.productId, body.quantity);
+        this.backend.security.audit('CART_UPDATE', { productId: body.productId, quantity: body.quantity });
+        break;
+        
+      case '/api/cart/remove':
+        if (!sessionId) sessionId = 'guest';
+        result = this.backend.modules.cart.removeItem(sessionId, body.productId);
+        this.backend.security.audit('CART_REMOVE', { productId: body.productId });
+        break;
+        
+      // Orders endpoints
+      case '/api/orders/create':
+        if (!sessionId) {
+          result = { success: false, error: 'Authentification requise' };
+        } else {
+          result = this.backend.modules.orders.createOrder(sessionId);
+          this.backend.security.audit('ORDER_CREATE', { orderId: result.orderId, sessionId });
+        }
+        break;
+        
+      case '/api/orders/list':
+        result = this.backend.modules.orders.getAllOrders();
+        break;
+        
+      // Products endpoints
+      case '/api/products/list':
+        result = this.backend.modules.products.getAll();
+        break;
+        
+      default:
+        result = { success: false, error: 'API endpoint introuvable' };
+    }
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(result));
+  },
+  
+  parseBody(req) {
+    return new Promise((resolve) => {
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', () => {
+        try {
+          resolve(JSON.parse(body));
+        } catch {
+          resolve({});
+        }
+      });
+    });
+  },
+  
+  initialize() {
+    console.log('\n🚀 Initialisation NEXUS AXION 2.0...\n');
+    
+    // Create demo user
+    const demoUser = this.backend.modules.auth.register({
+      name: 'Demo User',
+      email: 'demo@nexus.com',
+      password: 'demo123'
+    });
+    
+    console.log('✅ Utilisateur démo créé:');
+    console.log('   Email: demo@nexus.com');
+    console.log('   Mot de passe: demo123');
+    console.log('');
+    console.log('✅ Catalogue produits:', this.backend.modules.products.catalog.size, 'produits');
+    console.log('✅ Modules initialisés: Frontend, Backend, Connecteur');
+    console.log('');
+    console.log('🌟 NEXUS AXION 2.0 prêt!\n');
+  }
+};
+
+// ============================================
+// 🎬 DÉMARRAGE SERVEUR
+// ============================================
+
+// Initialize system
+NexusAxion.initialize();
+
+// Create HTTP server
+const server = http.createServer((req, res) => {
+  NexusAxion.handleRequest(req, res).catch(err => {
+    console.error('❌ Error:', err);
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('Internal Server Error');
+  });
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🔮 NEXUS AXION - API as Components running on port ${PORT}`);
-    console.log(`Auto-generated ${apiSystem.components.size} components from API definitions`);
-    console.log('Architecture: API endpoints → Automatic UI components');
+  console.log('='.repeat(60));
+  console.log('🌌 NEXUS AXION 2.0 - E-COMMERCE APPLICATION');
+  console.log('='.repeat(60));
+  console.log(`\n🚀 Serveur démarré sur le port ${PORT}`);
+  console.log(`📍 URL locale: http://localhost:${PORT}`);
+  console.log(`\n✨ Architecture Tri-Modulaire:`);
+  console.log(`   📦 Module Frontend: Pages SPA + Composants + Styles`);
+  console.log(`   ⚙️  Module Backend: Auth + Products + Cart + Orders + Analytics`);
+  console.log(`   🔌 Module Connecteur: Cache L1/L2/L3 + Sessions + API Router`);
+  console.log(`\n🎯 Features:`);
+  console.log(`   ✅ Authentification (register/login/logout)`);
+  console.log(`   ✅ Catalogue produits (6 produits)`);
+  console.log(`   ✅ Panier d'achat (add/update/remove)`);
+  console.log(`   ✅ Gestion commandes`);
+  console.log(`   ✅ Dashboard avec métriques`);
+  console.log(`   ✅ Cache intelligent multi-niveau`);
+  console.log(`   ✅ Rate limiting & Audit logs`);
+  console.log(`\n📊 Endpoints API:`);
+  console.log(`   POST /api/auth/register - Inscription`);
+  console.log(`   POST /api/auth/login - Connexion`);
+  console.log(`   POST /api/cart/add - Ajouter au panier`);
+  console.log(`   POST /api/cart/update - Modifier quantité`);
+  console.log(`   POST /api/cart/remove - Retirer du panier`);
+  console.log(`   POST /api/orders/create - Créer commande`);
+  console.log(`   GET /api/orders/list - Lister commandes`);
+  console.log(`   GET /api/products/list - Lister produits`);
+  console.log(`\n✅ Prêt pour tests et déploiement sur Render!`);
+  console.log('='.repeat(60));
+  console.log('');
 });
 
-module.exports = { server, apiSystem };
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('\n⚠️  SIGTERM reçu, arrêt gracieux...');
+  server.close(() => {
+    console.log('✅ Serveur arrêté proprement');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('\n⚠️  SIGINT reçu, arrêt gracieux...');
+  server.close(() => {
+    console.log('✅ Serveur arrêté proprement');
+    process.exit(0);
+  });
+});
